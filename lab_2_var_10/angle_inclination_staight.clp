@@ -1,11 +1,19 @@
 ; Вариант 10
-; TODO: возможно убрать проверку числа
-; Проверка, что введенное значение является числом
-(deffunction if-number (?value)
-    (return (numberp ?value))
+;
+(deftemplate angle "An angle template that has point-one, point-two and a resulting angle of a straight line"
+    (slot point-one)
+    (slot point-two)
+    (slot value)
 )
 
-; Функция нахождения угла наклона прямой линии по двум точкам
+(deftemplate straight-line "A straight line that has the coordinates of two points"
+    (slot x-one (type NUMBER) (default ?NONE))
+    (slot y-one (type NUMBER) (default ?NONE))
+    (slot x-two (type NUMBER) (default ?NONE))
+    (slot y-two (type NUMBER) (default ?NONE))
+)
+
+; Находит угол наклона прямой линии по двум точкам в градусах
 (deffunction find-angle (?x-one ?y-one ?x-two ?y-two)
     (bind ?angle NONE)
     (if (= ?x-one ?x-two)
@@ -14,31 +22,33 @@
     )
     (bind ?ratio (/ (- ?y-two ?y-one) (- ?x-two ?x-one)))
     (bind ?angle-rad (atan ?ratio)) ; Арктангенс
-    (bind ?angle (rad-deg ?angle-rad))
+    (bind ?angle (rad-deg ?angle-rad)) ; Перевод радианы в градусы
     (return ?angle)
 )
 
-(deftemplate point "A point that has x and y coordinates"
-    (slot x-value (type NUMBER) (default ?NONE))
-    (slot y-value (type NUMBER) (default ?NONE))
+; Проверяет, если указаны две одинаковые точки
+(defrule check-points
+    ?straight-line <- (straight-line (x-one ?x-one) (y-one ?y-one) (x-two ?x-two) (y-two ?y-two))
+    (test (and (eq ?x-one ?x-two) (eq ?y-one ?y-two)))
+    =>
+    (retract ?straight-line)
+    (printout t "Straight line containt two identical points" crlf)
 )
 
 (defrule find-angle-rule
-    ?point-one <- (point (x-value ?x-one) (y-value ?y-one))
-    ?point-two <- (point (x-value ?x-two) (y-value ?y-two))
-    (test (not (and (eq ?x-one ?x-two) (eq ?y-one ?y-two))))
+    ?straight-line <- (straight-line (x-one ?x-one) (y-one ?y-one) (x-two ?x-two) (y-two ?y-two))
     =>
-    (retract ?point-one ?point-two)
+    (retract ?straight-line)
     (bind ?angle (find-angle ?x-one ?y-one ?x-two ?y-two))
     (if (eq ?angle NONE)
     then
-        (printout t "Infinite slope" crlf)
-    else
-        (printout t "(x1=" ?x-one ";y1=" ?y-one ") and (x2=" ?x-two ";y2=" ?y-two "). The angle is " ?angle " degrees" crlf)
+        (bind ?angle "Infinite slope")
     )
+    (bind ?point-one (str-cat "(x1 = " ?x-one "; y1 = " ?y-one ")"))
+    (bind ?point-two (str-cat "(x2 = " ?x-two "; y2 = " ?y-two ")"))
+    (assert (angle (point-one ?point-one) (point-two ?point-two) (value ?angle)))
 )
 
 (deffacts start-facts
-    (point (x-value 0) (y-value 0))
-    (point (x-value 2) (y-value 1))
+    (straight-line (x-one 1) (y-one 1) (x-two 2) (y-two 2))
 )
